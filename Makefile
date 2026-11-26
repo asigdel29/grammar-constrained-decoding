@@ -7,3 +7,7 @@ demo:
 	$(PYTHON) -m grammar_decode
 bench:
 	$(PYTHON) -m grammar_decode.benchmark $(ARGS)
+
+.PHONY: graph
+graph:
+	bash scripts/graphify.sh

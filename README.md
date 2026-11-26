@@ -64,3 +64,22 @@ The compiler converts each schema node into a byte pattern. The mask tests the f
 ## License
 
 Apache License 2.0.
+
+## Documentation
+
+- [System design and UML diagrams](docs/system-design.md)
+- [Operating guide and decoder integration](docs/operations.md)
+- [Repository instructions](AGENTS.md)
+
+## Graphify source map
+
+Read the [source map report](graphify-out/GRAPH_REPORT.md) or query the [graph data](graphify-out/graph.json). Open the [interactive map](graphify-out/graph.html) locally in a browser.
+
+Install Graphify 0.9.76 with `uv tool install graphifyy==0.9.76`. Run these commands from the repository root.
+
+```sh
+make graph
+graphify query "compile_schema"
+```
+
+The build reads tracked Python files from the working tree, including tests. Stage new Python files before you refresh the map. Graphify uses local syntax analysis with model backends disabled. The system design diagrams describe runtime behavior.
