@@ -1,0 +1,66 @@
+# Grammar-constrained decoding
+
+Use a JSON Schema or a Pydantic v2 model to restrict the next token. This package provides a CPU reference implementation.
+
+## Quickstart
+
+Use Python 3.10 or later.
+
+```sh
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install '.[pydantic]'
+make check
+make demo
+make bench
+```
+
+The demo lists the allowed next characters for a two-value enumeration.
+
+## CI and benchmarks
+
+The Check workflow builds a wheel and tests it outside the checkout on Python 3.10, 3.12, and 3.13.
+
+The CPU benchmark runs on each push to main. You can also start it from the Actions tab. Each artifact contains raw timing batches, package versions, and CPU details.
+
+To reproduce the benchmark, use Python 3.12 and install the benchmark dependency version.
+
+```sh
+python -m pip install . 'regex==2024.11.6'
+python -m grammar_decode.benchmark --repeats 7 --iterations 10 --vocab-size 1024 > measurements.json
+```
+
+The workloads cover a string enumeration, a nested record, and a partial UTF-8 character after a long prefix. Each batch reports mean microseconds per call. Each mask record includes the median across batches, every raw sample, and the number of allowed tokens. Compile measurements include the regex cache.
+
+The synthetic vocabulary includes every single byte. Extra tokens use successive two-byte values in big-endian order. The workload measures full mask construction for a fixed prefix. Hosted runners can differ in CPU and load. Compare results on the same machine for performance analysis.
+
+## Interface
+
+```python
+from grammar_decode import compile_schema
+
+grammar = compile_schema({"type": "string", "enum": ["yes", "no"]})
+vocabulary = {0: b'"y', 1: b'es"', 2: b'"no"', 3: b'bad'}
+allowed = grammar.allowed_ids(b"", vocabulary, eos_id=4)
+assert allowed == {0, 2}
+assert grammar.finish(b'"yes"') == "yes"
+```
+
+Map each text token to its exact bytes. Exclude control tokens from the vocabulary. Use a unique ID for the end token. Each token must have the same bytes in every context. Text from standalone token decoding can lose partial UTF-8 sequences.
+
+Add each selected token to the byte prefix. The mask admits the end token once the grammar accepts that prefix. Call `compile_model(Model)` to use a Pydantic model. Call `finish` to apply its Python validators.
+
+## Schema support
+
+- Use JSON strings, integers, numbers, booleans, null, and string enumerations.
+- Use homogeneous arrays and objects with named properties.
+- Use acyclic local references of the form `#/$defs/name`.
+- Use `title`, `description`, and `default` as annotations.
+- The grammar emits compact JSON with all declared fields in schema order. It omits extra fields and optional whitespace.
+- Unsupported constraints raise `SchemaError` during compilation. Python validators can reject a structurally valid result.
+
+The compiler converts each schema node into a byte pattern. The mask tests the full prefix with each candidate token. This implementation favors conformance tests and small vocabularies. Its cost grows with prefix length and vocabulary size.
+
+## License
+
+Apache License 2.0.

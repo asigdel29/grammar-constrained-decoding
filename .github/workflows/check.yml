@@ -1,0 +1,33 @@
+# Exercise the installed wheel on the minimum and current reference Python versions.
+name: Check
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Build the wheel
+        run: python -m pip wheel --no-deps . -w dist
+      - name: Install the wheel with Pydantic
+        run: |
+          wheel=$(find dist -name '*.whl')
+          python -m pip install "${wheel}[pydantic]"
+          python -m pip check
+      - name: Test outside the checkout
+        working-directory: ${{ runner.temp }}
+        run: |
+          python -m unittest discover -s "$GITHUB_WORKSPACE/tests" -v
+          python -m grammar_decode
+          python -m grammar_decode.benchmark --repeats 1 --iterations 1 --vocab-size 256
