@@ -5,3 +5,5 @@ build/
 dist/
 
 /graphify-out/cache/
+
+/target/

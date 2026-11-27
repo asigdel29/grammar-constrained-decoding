@@ -1,0 +1,22 @@
+[package]
+name = "grammar-constrained-decoding"
+version = "0.2.0"
+edition = "2021"
+description = "Compile ordered JSON schemas into byte-level token masks"
+license = "Apache-2.0"
+
+[lib]
+name = "grammar_decode"
+crate-type = ["rlib", "cdylib"]
+
+[features]
+python = ["dep:pyo3", "pyo3/extension-module"]
+
+[dependencies]
+regex-automata = { version = "0.4", default-features = false, features = ["std", "dfa-build", "syntax"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+pyo3 = { version = "0.25", optional = true, features = ["abi3-py310"] }
+
+[[bench]]
+name = "masks"
+harness = false

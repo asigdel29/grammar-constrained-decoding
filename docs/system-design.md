@@ -13,8 +13,9 @@ classDiagram
         +allowed_ids(prefix, vocabulary, eos_id) set
         +finish(data)
     }
-    class Pattern {
-        +fullmatch(data, partial)
+    class NativeGrammar {
+        +accepts(data)
+        +allowed_ids(prefix, vocabulary, eos_id)
     }
     class BaseModel {
         +model_json_schema()
@@ -22,12 +23,12 @@ classDiagram
     }
     class SchemaError
     class ValueError
-    Grammar --> Pattern : holds compiled expression
+    Grammar --> NativeGrammar : owns byte automaton
     Grammar --> BaseModel : optional model class
     SchemaError --|> ValueError
 ```
 
-`compile_schema` copies the root schema and reads its local definitions. It translates each reachable node into a byte pattern. It returns a frozen `Grammar`.
+`compile_schema` copies the root schema and reads its local definitions. Rust translates each reachable node into a byte pattern. It compiles a dense DFA and returns it through a frozen Python adapter.
 `compile_model` uses the model's exported schema. It retains the model class for final validation.
 Each request can reuse the grammar and vocabulary. Each output stream needs its own prefix.
 
@@ -52,15 +53,16 @@ Annotations such as `default` do not insert values. Unsupported keywords on a co
 sequenceDiagram
     actor Caller
     participant G as Grammar
-    participant R as Compiled byte pattern
+    participant R as Rust byte automaton
     participant M as Pydantic model
     loop Each decoding step
         Caller->>G: allowed_ids(prefix, vocabulary, eos_id)
+        G->>R: Advance once over prefix bytes
         loop Each nonempty text token
-            G->>R: fullmatch(prefix + token bytes, partial=True)
-            R-->>G: Complete, partial, or absent
+            G->>R: Advance candidate from saved prefix state
+            R-->>G: Live or dead state
         end
-        G->>R: fullmatch(prefix)
+        G->>R: Check end-of-input transition
         G-->>Caller: Allowed IDs, including EOS for a complete prefix
         Caller->>Caller: Select an allowed ID and append text bytes or stop
     end
@@ -78,9 +80,9 @@ A partial match tests the grammar over bytes. A tokenizer with limited coverage 
 
 ## Cost and limits
 
-Mask construction scans the vocabulary for each output token. It builds a candidate byte string and matches from the start for each candidate.
-Longer prefixes increase copy and match costs. The result set grows with the number of allowed IDs.
-The caller applies this set to logits. The package provides no model server or mutable decoder state.
+A mask reads the prefix once. The automaton then reads each candidate until its last byte or the first dead transition.
+A reusable Rust prefix cursor can skip the prefix scan on subsequent steps. The Python adapter retains the original stateless method contract.
 
-The benchmark measures complete mask construction at fixed checkpoints. Its warm compile path includes regex cache effects.
-Use the operating guide to reproduce a run and interpret its records. [Operating guide](operations.md)
+The compiler limits expanded patterns to one MiB. The automaton builder limits its final table and construction workspace to 32 MiB each. Oversized schemas produce a compilation error. Repeated nested arrays can enlarge the expanded pattern. The compiler rejects traversal deeper than 128 levels.
+
+The native CLI reads bytes and writes JSON. The Python adapter calls the same Rust compiler through PyO3. Pydantic runs application validators after the structural check.
