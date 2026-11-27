@@ -67,3 +67,5 @@ python -m grammar_decode.benchmark --repeats 7 --iterations 10 --vocab-size 1024
 Each sample is the mean time per call within one batch, in microseconds. Compare the same case and prefix across runs.
 Use `allowed_count` to check that both runs permit the same number of IDs.
 The report records the schema, prefix bytes, raw samples, and environment. CI adds the installed package list and CPU description to the artifact.
+
+Use the [runbook](runbook.md) for CLI request fields and exit statuses. The [test log](test-log.md) records observed results.
