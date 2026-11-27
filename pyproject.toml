@@ -1,18 +1,20 @@
-# Declare the schema compiler and its installation requirements.
+# Build the Rust core and the Python adapter together.
 [build-system]
-requires = ["setuptools>=77"]
-build-backend = "setuptools.build_meta"
+requires = ["maturin>=1.8,<2"]
+build-backend = "maturin"
 
 [project]
 name = "grammar-constrained-decoding"
-version = "0.1.0"
+dynamic = ["version"]
 requires-python = ">=3.10"
-dependencies = ["regex>=2024.5.15"]
 license = "Apache-2.0"
 readme = "README.md"
 
 [project.optional-dependencies]
 pydantic = ["pydantic>=2,<3"]
 
-[tool.setuptools]
-packages = ["grammar_decode"]
+[tool.maturin]
+features = ["python"]
+module-name = "grammar_decode._native"
+python-source = "python"
+locked = true

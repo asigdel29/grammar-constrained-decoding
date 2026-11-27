@@ -1,10 +1,10 @@
 # Grammar-constrained decoding
 
-Use a JSON Schema or a Pydantic v2 model to restrict the next token. This package provides a CPU reference implementation.
+Use a JSON Schema or a Pydantic v2 model to restrict the next token. Rust compiles the schema and computes masks. Python bindings support Pydantic v2.
 
 ## Quickstart
 
-Use Python 3.10 or later.
+Install stable Rust and Python 3.10 or later.
 
 ```sh
 python3 -m venv .venv
@@ -17,20 +17,36 @@ make bench
 
 The demo lists the allowed next characters for a two-value enumeration.
 
+## Native library and CLI
+
+Install the CLI with `cargo install --path . --locked`. It works without Python.
+Use `accepts` to validate the exact bytes from standard input.
+
+```sh
+printf '%s' '{"type":"integer"}' > /tmp/grammar-integer.json
+printf '%s' '-21' | grammar-decode accepts /tmp/grammar-integer.json
+printf '%s' '{"prefix":[45],"vocabulary":{"0":[49],"1":[120]},"eos_id":2}' | grammar-decode mask /tmp/grammar-integer.json
+```
+
+The two commands print `true` and `[0]`. The validation command returns 1 for invalid output. Invalid schemas and malformed requests return 2.
+
+Use `Grammar::compile` from Rust. Use `Grammar::prefix` to obtain a reusable cursor. Each call to `advance` returns a new cursor.
+
 ## CI and benchmarks
 
 The Check workflow builds a wheel and tests it outside the checkout on Python 3.10, 3.12, and 3.13.
 
 The CPU benchmark runs on each push to main. You can also start it from the Actions tab. Each artifact contains raw timing batches, package versions, and CPU details.
 
-To reproduce the benchmark, use Python 3.12 and install the benchmark dependency version.
+To reproduce the benchmark, use Python 3.12 and the locked Rust dependencies.
 
 ```sh
-python -m pip install . 'regex==2024.11.6'
+python -m pip install .
+cargo bench --locked --bench masks
 python -m grammar_decode.benchmark --repeats 7 --iterations 10 --vocab-size 1024 > measurements.json
 ```
 
-The workloads cover a string enumeration, a nested record, and a partial UTF-8 character after a long prefix. Each batch reports mean microseconds per call. Each mask record includes the median across batches, every raw sample, and the number of allowed tokens. Compile measurements include the regex cache.
+The workloads cover a string enumeration, a nested record, and a partial UTF-8 character after a long prefix. Each batch reports mean microseconds per call. Each mask record includes the median across batches, every raw sample, and the number of allowed tokens. Compile measurements include construction of a new automaton.
 
 The synthetic vocabulary includes every single byte. Extra tokens use successive two-byte values in big-endian order. The workload measures full mask construction for a fixed prefix. Hosted runners can differ in CPU and load. Compare results on the same machine for performance analysis.
 
@@ -59,7 +75,7 @@ Add each selected token to the byte prefix. The mask admits the end token once t
 - The grammar emits compact JSON with all declared fields in schema order. It omits extra fields and optional whitespace.
 - Unsupported constraints raise `SchemaError` during compilation. Python validators can reject a structurally valid result.
 
-The compiler converts each schema node into a byte pattern. The mask tests the full prefix with each candidate token. This implementation favors conformance tests and small vocabularies. Its cost grows with prefix length and vocabulary size.
+The compiler builds an anchored byte automaton. The mask advances through the prefix once. Each candidate starts at this saved state.
 
 ## License
 
@@ -82,4 +98,4 @@ make graph
 graphify query "compile_schema"
 ```
 
-The build reads tracked Python files from the working tree, including tests. Stage new Python files before you refresh the map. Graphify uses local syntax analysis with model backends disabled. The system design diagrams describe runtime behavior.
+The build reads tracked Python and Rust files from the working tree, including tests. Stage new source files before you refresh the map. Graphify uses local syntax analysis with model backends disabled. The system design diagrams describe runtime behavior.

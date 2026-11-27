@@ -1,8 +1,8 @@
 # Operating guide
 
-## Set up the reference implementation
+## Build the Rust core and Python extension
 
-Use Python 3.10 or later. Run the following commands from the repository root.
+Use stable Rust and Python 3.10 or later. Run the following commands from the repository root.
 
 ```sh
 python3 -m venv .venv
@@ -56,10 +56,11 @@ An adapter that decodes each piece to text can discard these bytes.
 
 ## Reproduce a CPU benchmark
 
-Use the same CPU, Python version, regex version, and vocabulary size for comparisons.
+Use the same CPU, Python version, Rust version, and vocabulary size for comparisons.
 
 ```sh
-python -m pip install . 'regex==2024.11.6'
+python -m pip install .
+cargo bench --locked --bench masks
 python -m grammar_decode.benchmark --repeats 7 --iterations 10 --vocab-size 1024 > measurements.json
 ```
 

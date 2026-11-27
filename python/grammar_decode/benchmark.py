@@ -55,7 +55,7 @@ def benchmark(repeats, iterations, vocab_size):
                           "median_us": median(samples), "samples_us": samples})
         results.append({"name": name, "schema": schema, "warm_compile_us": compile_samples, "masks": masks})
     return {"format_version": 1, "python": platform.python_version(), "platform": platform.platform(),
-            "machine": platform.machine(), "regex": version("regex"), "git_sha": os.getenv("GITHUB_SHA"),
+            "machine": platform.machine(), "backend": "rust-dfa", "package_version": version("grammar-constrained-decoding"), "git_sha": os.getenv("GITHUB_SHA"),
             "iterations": iterations, "repeats": repeats, "vocabulary_size": vocab_size, "cases": results}
 
 

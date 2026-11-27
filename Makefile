@@ -2,6 +2,8 @@
 PYTHON ?= python3
 .PHONY: check demo bench
 check:
+	cargo fmt --check
+	cargo test --locked
 	$(PYTHON) -m unittest discover -s tests -v
 demo:
 	$(PYTHON) -m grammar_decode

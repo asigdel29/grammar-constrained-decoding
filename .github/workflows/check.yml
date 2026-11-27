@@ -6,6 +6,21 @@ on:
 permissions:
   contents: read
 jobs:
+  native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: cargo fmt --check
+      - run: cargo clippy --locked --all-targets --features python -- -D warnings
+      - run: cargo test --locked
+      - run: cargo bench --locked --bench masks > native-mask.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rust-mask-benchmark
+          path: native-mask.json
   conformance:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -31,3 +46,8 @@ jobs:
           python -m unittest discover -s "$GITHUB_WORKSPACE/tests" -v
           python -m grammar_decode
           python -m grammar_decode.benchmark --repeats 1 --iterations 1 --vocab-size 256
+      - uses: actions/upload-artifact@v4
+        if: matrix.python == '3.12'
+        with:
+          name: linux-python-wheel
+          path: dist/*.whl
