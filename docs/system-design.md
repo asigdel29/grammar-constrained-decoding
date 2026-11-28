@@ -86,3 +86,5 @@ A reusable Rust prefix cursor can skip the prefix scan on subsequent steps. The 
 The compiler limits expanded patterns to one MiB. The automaton builder limits its final table and construction workspace to 32 MiB each. Oversized schemas produce a compilation error. Repeated nested arrays can enlarge the expanded pattern. The compiler rejects traversal deeper than 128 levels.
 
 The native CLI reads bytes and writes JSON. The Python adapter calls the same Rust compiler through PyO3. Pydantic runs application validators after the structural check.
+
+The [compiler contract](design/compiler.md) explains the canonical byte language. The [token mask design](design/token-mask.md) describes individual token decisions.
